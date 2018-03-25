@@ -11,6 +11,7 @@ import (
 
 const (
 	timeout = 10 * time.Second
+	baseDir = "./files/"
 )
 
 func main() {
@@ -42,45 +43,72 @@ func homePage(w http.ResponseWriter, req *http.Request) {
 
 func upload(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
-		// crutime := time.Now().Unix()
-		// h := md5.New()
-		// io.WriteString(h, strconv.FormatInt(crutime, 10))
-		// token := fmt.Sprintf("%x", h.Sum(nil))
-
-		// t, _ := template.ParseFiles("upload.gtpl")
-		// t.Execute(w, token)
+		http.Redirect(w, req, "/", http.StatusSeeOther)
 	} else {
 		req.ParseMultipartForm(32 << 20)
 		file, handler, err := req.FormFile("uploadfile")
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Failed to open form file:", err)
+			io.WriteString(w, "Failed to open file")
 			return
 		}
 		defer file.Close()
-		fmt.Fprintf(w, "%v", handler.Header)
-		err = req.ParseForm()
-		fmt.Println(*req)
-		var newFileName string
-		baseDir := "./files/"
-		dir := baseDir
-		if err != nil {
-			fmt.Println("failed to read form:", err)
-			newFileName = handler.Filename
-		} else {
-			newFileName = req.FormValue("newName")
-			dir += req.FormValue("dir") + "/"
-			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-					dir = baseDir
-				}
-			}
-		}
-		f, err := os.OpenFile(dir+newFileName, os.O_WRONLY|os.O_CREATE, 0666)
-		if err != nil {
-			fmt.Println("failed to open file:", newFileName, "with error=", err)
+		if handler.Filename == "" {
 			return
 		}
-		defer f.Close()
-		io.Copy(f, file)
+		if err = req.ParseForm(); err != nil {
+			fmt.Println("failed to read form, request:", *req, "with error:", err)
+			io.WriteString(w, "Failed to read form")
+			return
+		}
+		newFileName := req.FormValue("newName")
+		if newFileName == "" {
+			newFileName = handler.Filename
+		}
+		dir := getFullPath(baseDir, req.FormValue("dir"))
+		err = makeDirectoriesIfNecessary(dir)
+		if err != nil {
+			io.WriteString(w, "Error making requested directory")
+			fmt.Println("Error making directory:", err)
+			return
+		}
+		if err = copyFileToDisk(file, dir, newFileName); err != nil {
+			fmt.Println("Error copying file to disk:", err)
+			io.WriteString(w, "Error copying file to disk")
+			return
+		}
+		http.ServeFile(w, req, "upload.html")
 	}
+}
+
+func getFullPath(base string, dir string) string {
+	return base + dir + "/"
+}
+
+func makeDirectoriesIfNecessary(dir string) error {
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			fmt.Println("Couldn't make all dirs:", err)
+			return err
+		}
+	} else if err != nil {
+		fmt.Println("Couldn't stat dir:", err)
+		return err
+	}
+	return nil
+}
+
+func copyFileToDisk(file io.Reader, dir string, newFileName string) error {
+	f, err := os.OpenFile(dir+newFileName, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println("failed to open file:", newFileName, "with error=", err)
+		return err
+	}
+	defer f.Close()
+	if _, err = io.Copy(f, file); err != nil {
+		fmt.Println("failed to copy file:", err)
+		return err
+	}
+	return nil
 }
