@@ -6,7 +6,7 @@ import (
 
 func main() {
 	http.HandleFunc("/", homePage)
-	http.Handle("/files", http.StripPrefix("/files", http.FileServer(http.Dir("./files"))))
+	http.Handle("/files/", http.StripPrefix("/files", http.FileServer(http.Dir("./files"))))
 	http.ListenAndServe(":8080", nil)
 }
 
