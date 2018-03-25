@@ -8,5 +8,17 @@
         <p>Welcome to the Franklin Local File server!</p>
         </br>
         <a href="files">Files</a>
+        </br>
+        </br>
+        <p>Upload a file:</p>
+        <form enctype="multipart/form-data" action="/upload" method="post">
+            <input type="file" name="uploadfile" />
+            </br> Directory:</br>
+            <input type="text" name="dir" placeholder="ex: video/movies"/>
+            </br> New file name:</br>
+            <input type="text" name="newName" placeholder="JohnWick.mp4"/> </br>
+            <input type="hidden" name="token" value="{{.}}"/>
+            <input type="submit" value="upload" />
+        </form>
     </body>
 </html>

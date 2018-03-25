@@ -17,3 +17,6 @@
 
 # Don't save file server files
 /Files
+
+# binary
+file-server
