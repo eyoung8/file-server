@@ -17,5 +17,9 @@ func main() {
 }
 
 func homePage(w http.ResponseWriter, req *http.Request) {
+	if req.URL.Path != "/" {
+		http.NotFound(w, req)
+		return
+	}
 	http.ServeFile(w, req, "index.html")
 }
