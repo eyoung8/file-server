@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -10,10 +12,13 @@ const (
 )
 
 func main() {
+	port := flag.Int("p", 8080, "port to use")
+	flag.Parse()
+
 	http.DefaultClient.Timeout = timeout
 	http.HandleFunc("/", homePage)
 	http.Handle("/files/", http.StripPrefix("/files", http.FileServer(http.Dir("./files"))))
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 }
 
 func homePage(w http.ResponseWriter, req *http.Request) {
